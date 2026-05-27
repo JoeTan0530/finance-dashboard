@@ -1,0 +1,220 @@
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { Button, Col, Row } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+
+// Import the FontAwesomeIcon component
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faPenToSquare, faPlus, faTrash, faBell } from "@fortawesome/free-solid-svg-icons";
+
+import CustomTable from "../components/CustomTable.tsx";
+import { showSystemPopup } from "../services/CustomSystemPopupService.js";
+import { showConfirmModal } from "../services/CustomConfirmModalService.js";
+import { formatDateDDMMYYYY, formatNumberWithThousandsSeparator } from "../utils/general.js";
+import { getJobAppList, getStatusList, removeJobItem, sendEmailNotification } from "../services/JobApplicationService.js";
+
+const JobApplicationList: React.FC = () => {
+  const navigate = useNavigate();
+
+  const [rawList, setRawList] = useState([]);
+  const [statusMap, setStatusMap] = useState<any>({});
+  const [pagination, setPagination] = useState({});
+  const [loadingState, setLoadingState] = useState(true);
+
+  /* This is used because needed a gloabl variable to hold the current list of data for display use for button functions. */
+  let dataList = useRef([]);
+
+  const refreshList = useCallback((pageNum = 1) => {
+    setLoadingState(true);
+
+    getJobAppList(pageNum, (data) => {
+      const list = data?.listing || data || [];
+      setRawList(Array.isArray(list) ? list : []);
+      dataList.current = Array.isArray(list) ? list : [];
+      const paginationData = data?.pagination || {};
+      setPagination(paginationData);
+      setTimeout(() => {
+        setLoadingState(false);
+      }, 500);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    getStatusList((data) => {
+      const list = Array.isArray(data) ? data : [];
+      const nextMap = {};
+      list.forEach((item) => {
+        nextMap[item.value] = item.label;
+      });
+      setStatusMap(nextMap);
+    });
+  }, []);
+
+  useEffect(() => {
+    refreshList();
+  }, [statusMap, refreshList]);
+
+  const triggerDelete = useCallback(async (jobID) => {
+    const jobItem = dataList.current.find((items) => {
+      return items.jobID === jobID;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const ok = await showConfirmModal({
+      title: "Delete application",
+      message: (
+        <>
+          <div className="mb-3">
+            This will permanently remove the job application.
+          </div>
+          <div className="row mb-2 mb-md-1">
+            <div className="col-12 col-md-4">Role:</div>
+            <div className="col-12 col-md-8 font-weight-thick">{jobItem.role}</div>
+          </div>
+          <div className="row">
+            <div className="col-12 col-md-4">Company Name:</div>
+            <div className="col-12 col-md-8 font-weight-thick">{jobItem.company_name}</div>
+          </div>
+        </>
+      ),
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      confirmVariant: "danger",
+    });
+
+    if (!ok) return;
+
+    removeJobItem(jobID, () => {
+      showSystemPopup("Deleted application. Refreshing list.", "success");
+      refreshList();
+    });
+  }, [refreshList]);
+
+  const triggerNotification = useCallback(async (jobID) => {
+    sendEmailNotification(jobID, () => {
+      showSystemPopup("Email notification sent, please check your inbox.", "success");
+    });
+  }, []);
+
+  const columns = useMemo(
+    () => [
+      { header: "Role", accessor: "role" },
+      {
+        header: "Applied",
+        render: (row) => formatDateDDMMYYYY(row.applied_date) || row.applied_date || "-",
+      },
+      { header: "Company", accessor: "company_name" },
+      { header: "Reg no.", accessor: "company_reg_num" },
+      {
+        header: "Requirement",
+        render: (row) => (
+          <div className="text-ellipsis-1" style={{ maxWidth: 260 }}>
+            {row.job_requirement || "-"}
+          </div>
+        ),
+      },
+      {
+        header: "Salary",
+        render: (row) => formatNumberWithThousandsSeparator(row.salary) || row.salary || "-",
+      },
+      {
+        header: "Status",
+        render: (row) => statusMap[row.status] || row.status || "-",
+      },
+      {
+        header: "Created",
+        render: (row) => formatDateDDMMYYYY(row.createdAt) || row.createdAt || "-",
+      },
+      {
+        header: "Actions",
+        render: (row) => (
+          <div className="d-flex justify-content-end">
+            <Button
+              variant="tertiary"
+              className="me-1"
+              title="Notify"
+              aria-label="Send email notification"
+              onClick={() => triggerNotification(row.jobID)}
+            >
+              <FontAwesomeIcon icon={faBell} className="btn-icon" />
+            </Button>
+            <Button
+              variant="tertiary"
+              className="me-1"
+              title="View"
+              aria-label="View job application"
+              onClick={() => navigate(`/jobs/${row.jobID}`)}
+            >
+              <FontAwesomeIcon icon={faEye} className="btn-icon" />
+            </Button>
+            <Button
+              variant="tertiary"
+              className="me-1"
+              title="Edit"
+              aria-label="Edit job application"
+              onClick={() => navigate(`/jobs/${row.jobID}/edit`)}
+            >
+              <FontAwesomeIcon icon={faPenToSquare} className="btn-icon" />
+            </Button>
+            <Button
+              variant="tertiary"
+              title="Delete"
+              aria-label="Delete job application"
+              onClick={() => triggerDelete(row.jobID)}
+            >
+              <FontAwesomeIcon icon={faTrash} className="btn-icon" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [navigate, statusMap, triggerDelete]
+  );
+
+  const listCss = useMemo(
+    () => ({
+      header: [
+        { index: 8, css: { textAlign: "right" } },
+      ],
+      listing: [
+        { index: 8, css: { textAlign: "right" } },
+      ],
+    }),
+    []
+  );
+
+  return (
+    <>
+      <Row className="mb-3 align-items-end">
+        <Col xs={12} md={9} xl={10}>
+          <h1 className="page-title">Job applications</h1>
+          <h3 className="page-sub-title mb-0">Track your pipeline in one place</h3>
+        </Col>
+        <Col xs={12} md={3} xl={2} className="mt-3 mt-md-0">
+          <Button variant="primary" className="w-100" onClick={() => navigate("/jobs/new")}>
+            <FontAwesomeIcon icon={faPlus} className="btn-icon" />
+            <span>Add application</span>
+          </Button>
+        </Col>
+      </Row>
+
+      <div className="mt-3">
+        <CustomTable
+          listingID="jobAppList"
+          listingData={rawList}
+          columns={columns}
+          listingCss={listCss}
+          pagingData={pagination}
+          pagingFunction={refreshList}
+          emptyTitle="No job applications yet"
+          emptySubtitle="Click “Add application” to create your first record"
+          loadingState={loadingState}
+        />
+      </div>
+    </>
+  );
+};
+
+export default JobApplicationList;
+
