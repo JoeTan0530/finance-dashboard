@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const Category = require('../models/Category');
 const { generateReturnObj } = require('../models/utilities/general');
 
 router.post('/', async (req, res) => {
@@ -14,11 +14,8 @@ router.post('/', async (req, res) => {
         let params = request.params;
 
         switch (command) {
-            case "registerUser":
-				response = await User.registerUser(params);
-				break;
-			case "loginUser":
-				response = await User.loginUser(params);
+            case "getCategoryList":
+				response = await Category.getCategoryList(params);
 				break;
             default:
                 response = generateReturnObj("Error", 1, "", "Invalid command.");

@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const {
 	generateReturnObj,
 	verifyIdFormat,
-	convertFirstCharToUpper
+	convertFirstCharToUpper,
+	decodeToken
 } = require('./utilities/general');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -22,6 +23,9 @@ const userSchema = new mongoose.Schema({
 	email: {
 		type: String,
 		require: true
+	},
+	loginToken: {
+		type: String,
 	}
 }, {
 	timestamps: true // Adds createdAt and updatedAt automatically
@@ -145,9 +149,34 @@ userSchema.statics.loginUser = async function (params) {
 			}
 		};
 
+		// Update login token into database.
+		const updateUserItem = await this.findById(userRes['_id']);
+		updateUserItem.loginToken = generatedToken;
+
+		await updateUserItem.save();
+
 		return generateReturnObj("Success", 0, sessionData, "Successfully logged in.");
 	} else {
 		return generateReturnObj("Error", 2, "", "Invalid Params");
+	}
+}
+
+userSchema.statics.verifyLoginToken = async function(loginToken = "", userID = "") {
+	if (!loginToken || loginToken == "") {
+		return generateReturnObj("Error", 2, "", "Invalid login token.");
+	}
+
+	const verifiedUserID = verifyIdFormat(userID);
+	if (!userID || userID == "" || (verifiedUserID['status'] && verifiedUserID['status'] == "error")) {
+		return generateReturnObj("Error", 2, "", "Invalid user ID.");
+	}
+
+	const getUserRes = await this.findById(verifiedUserID);
+
+	if (getUserRes && getUserRes['loginToken'] == loginToken) {
+		return generateReturnObj("Success", 0, "", "Successfully verified login token.");
+	} else {
+		return generateReturnObj("Error", 2, "","Unable to verify token.");
 	}
 }
 

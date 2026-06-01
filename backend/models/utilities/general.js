@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 const generateReturnObj = (type, returnCode, dataReturn = "", statusMsg = "") => {
 	let tempObj = {
@@ -58,10 +59,27 @@ const convertFirstCharToUpper = (itemString = "") => {
 	return tempNewItemString;
 }
 
+const decodeToken = (token = "") => {
+	if (!token || token == "") {
+		return generateReturnObj("Error", 2, "", "Invalid token, please relogin to get new valid login token.");
+	}
+
+	const JWT_SECRET = process.env.JWT_SECRET;
+
+	try {
+		const decodedToken = jwt.verify(token, JWT_SECRET);
+
+		return decodedToken;
+	} catch (error) {
+		return generateReturnObj("Error", 2, "", error.message);
+	}
+}
+
 // Export all functions
 module.exports = {
     generateReturnObj,
     verifyIdFormat,
     mapCountObj,
-    convertFirstCharToUpper
+    convertFirstCharToUpper,
+    decodeToken
 };
