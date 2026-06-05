@@ -13,11 +13,13 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 // frame import
 import FrameLayout from "./components/FrameLayout.tsx";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 // pages import
-import JobApplicationList from "./pages/JobApplicationList.tsx";
-import JobApplicationDetails from "./pages/JobApplicationDetails.tsx";
-import JobApplicationForm from "./pages/JobApplicationForm.tsx";
+import LoginPage from "./pages/LoginPage.tsx";
+import RegistrationPage from "./pages/RegistrationPage.tsx";
+import Dashboard from "./pages/Dashboard.tsx";
+import ExpenseForm from "./pages/ExpenseForm.tsx";
 
 function App() {
   return (
@@ -26,11 +28,15 @@ function App() {
         <CustomConfirmModalProvider>
           <Router>
             <Routes>
-              <Route element={<FrameLayout />}>
-                <Route path="/" element={<JobApplicationList />} />
-                <Route path="/jobs/new" element={<JobApplicationForm mode="add" />} />
-                <Route path="/jobs/:jobID" element={<JobApplicationDetails />} />
-                <Route path="/jobs/:jobID/edit" element={<JobApplicationForm mode="edit" />} />
+              <Route path="/" element={<LoginPage />} />
+              <Route path="/registration" element={<RegistrationPage />} />
+
+              <Route element={<ProtectedRoute />}>
+                <Route element={<FrameLayout />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/expenses/new" element={<ExpenseForm mode="add" />} />
+                  <Route path="/expenses/:expenseID/edit" element={<ExpenseForm mode="edit" />} />
+                </Route>
               </Route>
 
               {/* 404 route */}

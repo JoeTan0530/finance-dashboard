@@ -1,232 +1,202 @@
-import React, { useState, useEffect } from "react";
-import { Row, Col, Button } from "react-bootstrap";
-
-// Import the FontAwesomeIcon component
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-
-// Import specific icons
-import { faPlus, faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons';
-
-// Import table component
-import CustomTable from "../components/CustomTable.tsx";
-import CustomRating from '../components/CustomRating.tsx';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Col, Row } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { apiCaller } from "../utils/general.js";
-import { showSystemPopup } from '../services/CustomSystemPopupService.js';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faPenToSquare, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+
+import CustomTable from "../components/CustomTable.tsx";
+import ExpenseDetailsModal from "../components/ExpenseDetailsModal.tsx";
+import { showSystemPopup } from "../services/CustomSystemPopupService.js";
+import { showConfirmModal } from "../services/CustomConfirmModalService.js";
+import { formatCurrencyRM, formatDateDDMMYYYY } from "../utils/general.js";
+import { getCategoryList } from "../services/CategoryService.js";
+import { getExpenseList, removeExpense } from "../services/ExpenseService.js";
 
 const Dashboard: React.FC = () => {
-	const queryUrl = process.env.REACT_APP_QUERY_URL_BOOK;
-	const navigate = useNavigate();
+  const navigate = useNavigate();
 
-	const thArray = [
-		"Title",
-		"Status",
-		"Rating",
-		"Actions",
-		"Added Date"
-	]
+  const [rawList, setRawList] = useState([]);
+  const [categoryMap, setCategoryMap] = useState<any>({});
+  const [pagination, setPagination] = useState({});
+  const [selectedExpenseID, setSelectedExpenseID] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const dataList = useRef([]);
 
-	const listCss = {
-		header: [
-			{
-				index: 3,
-				css: {
-					textAlign: "right",
-				}
-			},
-			{
-				index: 4,
-				css: {
-					textAlign: "right",
-				}
-			}
-		],
-		listing: [
-			{
-				index: 3,
-				css: {
-					textAlign: "right",
-				}
-			},
-			{
-				index: 4,
-				css: {
-					textAlign: "right",
-				}
-			}
-		]
-	};
+  const refreshList = useCallback((pageNum = 1) => {
+    getExpenseList(pageNum, (data) => {
+      const list = data?.listing || data || [];
+      setRawList(Array.isArray(list) ? list : []);
+      dataList.current = Array.isArray(list) ? list : [];
+      setPagination(data?.pagination || {});
+    });
+  }, []);
 
-	const [listingData, setListingData] = useState([]);
-	const [listingCss, setListingCss] = useState(listCss);
-	const [statusList, setStatusList] = useState({});
-	const [filter, setFilter] = useState("");
-	const [listingTabCount, setListingTabCount] = useState({});
-	const [pagination, setPagination] = useState({});
+  useEffect(() => {
+    getCategoryList((data) => {
+      const list = Array.isArray(data) ? data : [];
+      const nextMap = {};
+      list.forEach((item) => {
+        nextMap[item.value] = item.label;
+      });
+      setCategoryMap(nextMap);
+    });
+  }, []);
 
-	useEffect(() => {
-		getStatusDisplay();
-	}, []);
+  useEffect(() => {
+    refreshList();
+  }, [refreshList]);
 
-	useEffect(() => {
-		if (statusList && typeof statusList === "object" && Object.keys(statusList).length > 0) {
-			getBookList();
-		}
-	}, [statusList]);
+  const openDetailsModal = (expenseID) => {
+    setSelectedExpenseID(expenseID);
+    setIsDetailsOpen(true);
+  };
 
-	useEffect(() => {
-		getBookList();
-	}, [filter]);
+  const closeDetailsModal = () => {
+    setIsDetailsOpen(false);
+    setSelectedExpenseID(null);
+  };
 
-	const navigateToPage = (pageName = 1) => {
-		navigate(pageName);
-	};
+  const triggerDelete = useCallback(async (expenseID) => {
+    const expenseItem = dataList.current.find((item) => item.expenseID === expenseID);
 
-	const getStatusDisplay = () => {
-		let params = {
-			url: queryUrl,
-			urlParams: {
-				command: "getStatusList",
-			}
-		}
+    const ok = await showConfirmModal({
+      title: "Delete expense",
+      message: (
+        <>
+          <div className="mb-3">This will permanently remove the expense record.</div>
+          <div className="row mb-2">
+            <div className="col-12 col-md-4">Amount:</div>
+            <div className="col-12 col-md-8 font-weight-thick">
+              {formatCurrencyRM(expenseItem?.amount) || expenseItem?.amount || "-"}
+            </div>
+          </div>
+          <div className="row mb-2">
+            <div className="col-12 col-md-4">Category:</div>
+            <div className="col-12 col-md-8 font-weight-thick">
+              {categoryMap[expenseItem?.category] || expenseItem?.category || "-"}
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-12 col-md-4">Description:</div>
+            <div className="col-12 col-md-8 font-weight-thick">{expenseItem?.description || "-"}</div>
+          </div>
+        </>
+      ),
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      confirmVariant: "danger",
+    });
 
-		apiCaller("POST", params, loadStatusDisplay);
-	}
+    if (!ok) return;
 
-	const loadStatusDisplay = (data, msg) => {
-		const optionList = data;
+    removeExpense(expenseID, () => {
+      showSystemPopup("Expense deleted. Refreshing list.", "success");
+      refreshList();
+    });
+  }, [categoryMap, refreshList]);
 
-		if (optionList) {
-			const optionObj = {};
-			optionList.forEach((optionVal, optionIndex) => {
-				optionObj[optionVal.value] = optionVal.label;
-			});
+  const columns = useMemo(
+    () => [
+      {
+        header: "Amount",
+        render: (row) => formatCurrencyRM(row.amount) || row.amount || "-",
+      },
+      {
+        header: "Category",
+        render: (row) => categoryMap[row.category] || row.category || "-",
+      },
+      {
+        header: "Description",
+        render: (row) => (
+          <div className="text-ellipsis-1" style={{ maxWidth: 260 }}>
+            {row.description || "-"}
+          </div>
+        ),
+      },
+      {
+        header: "Expense Date",
+        render: (row) => formatDateDDMMYYYY(row.date) || row.date || "-",
+      },
+      {
+        header: "Actions",
+        render: (row) => (
+          <div className="d-flex justify-content-end">
+            <Button
+              variant="tertiary"
+              className="me-1"
+              title="View"
+              aria-label="View expense details"
+              onClick={() => openDetailsModal(row.expenseID)}
+            >
+              <FontAwesomeIcon icon={faEye} className="btn-icon" />
+            </Button>
+            <Button
+              variant="tertiary"
+              className="me-1"
+              title="Edit"
+              aria-label="Edit expense"
+              onClick={() => navigate(`/expenses/${row.expenseID}/edit`)}
+            >
+              <FontAwesomeIcon icon={faPenToSquare} className="btn-icon" />
+            </Button>
+            <Button
+              variant="tertiary"
+              title="Delete"
+              aria-label="Delete expense"
+              onClick={() => triggerDelete(row.expenseID)}
+            >
+              <FontAwesomeIcon icon={faTrash} className="btn-icon" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [navigate, categoryMap, triggerDelete]
+  );
 
-			setStatusList(optionObj);
-		}
-	}
+  const listCss = useMemo(
+    () => ({
+      header: [{ index: 4, css: { textAlign: "right" } }],
+      listing: [{ index: 4, css: { textAlign: "right" } }],
+    }),
+    []
+  );
 
-	const getBookList = (pageNum = 1) => {
-		const params = {
-			url: queryUrl,
-			urlParams: {
-				command: "getBookList",
-				params: {
-					status: filter,
-					page: pageNum
-				}
-			}
-		};
+  return (
+    <>
+      <Row className="mb-3 align-items-start">
+        <Col>
+          <h1 className="page-title">Expenses</h1>
+          <h3 className="page-sub-title">Overview of your spending</h3>
+        </Col>
+        <Col xs="auto" className="mt-3 mt-md-0">
+          <Button variant="primary" onClick={() => navigate("/expenses/new")}>
+            <FontAwesomeIcon icon={faPlus} className="btn-icon" />
+            <span>Add expense</span>
+          </Button>
+        </Col>
+      </Row>
 
-		apiCaller("POST", params, listingCallback);
-	}
+      <div className="mt-3">
+        <CustomTable
+          listingID="expenseList"
+          listingData={rawList}
+          columns={columns}
+          listingCss={listCss}
+          pagingData={pagination}
+          pagingFunction={refreshList}
+          emptyTitle="No expenses yet"
+          emptySubtitle='Click "Add expense" to create your first record'
+        />
+      </div>
 
-	const listingCallback = (data, msg) => {
-		const bookList = data.listing;
-
-		let listingData = [];
-
-		if (bookList && Array.isArray(bookList) && bookList.length > 0) {
-			bookList.forEach((dataVal, dataIndex) => {
-				let editBtn = (
-							<>
-								<Button variant="tertiary" onClick={() => {navigateToPage(`/edit-book/${dataVal['bookID']}`)}} className="me-1"><FontAwesomeIcon icon={faPenToSquare} className="btn-icon"/></Button>
-								<Button variant="tertiary" onClick={() => {deleteBook(dataVal['bookID'])}}><FontAwesomeIcon icon={faTrash} className="btn-icon"/></Button>
-							</>
-						);
-				let ratingDisplay = (<CustomRating
-												ratingID="rating"
-												ratingCount={5}
-												initialRating={Number(dataVal['rating'])}
-												readOnly={true}
-											/>);
-				listingData.push({
-					title: dataVal['title'],
-					status: statusList[dataVal['status']] ? statusList[dataVal['status']] : dataVal['status'],
-					rating: ratingDisplay,
-					actionBtn: editBtn,
-					createdAt: dataVal['createdAt']
-				});
-			});
-		}
-
-		setListingData(listingData);
-
-		const bookCount = data.counts;
-		let tabCount = bookCount ? bookCount : {};
-
-		setListingTabCount(tabCount);
-
-		setPagination(data.pagination);
-	}
-
-	const deleteBook = (bookID) => {
-		const params = {
-			url: queryUrl,
-			urlParams: {
-				command: "removeBookItem",
-				params: {
-					bookID: bookID,
-				}
-			}
-		};
-
-		apiCaller("POST", params, successDeleteBookCallback);
-	}
-
-	const successDeleteBookCallback = (data, msg) => {
-		showSystemPopup("Successfully deleted book, refreshing book list.");
-		getBookList();	
-	}
-
-	const changeListingTab = (event, tabName) => {
-		document.querySelectorAll(".tab-btn").forEach(btn => {
-		  	btn.classList.remove("active");
-		});
-		
-		event.target.classList.add("active");
-		setFilter(tabName);
-	}
-
-	return (
-		<>
-			<div className="d-flex flex-column flex-md-row justify-content-between mb-3">
-				<div>
-					<h1 className="page-title">
-						My Books
-					</h1>
-					<h3 className="page-sub-title">
-						Manage your reading collection
-					</h3>
-				</div>
-				<div className="d-flex d-md-block justify-content-end mt-3 mt-md-0">
-					<Button variant="primary" onClick={() => {navigateToPage("/add-book");}}>
-						<FontAwesomeIcon icon={faPlus} className="btn-icon"/>
-						<span>Add Book</span>
-					</Button>
-				</div>
-			</div>
-			<div>
-				<div className="tab-container">
-					<Button className="tab-btn active" onClick={(event) => {changeListingTab(event, "");}}>
-						All ({listingTabCount.total ? listingTabCount.total : 0})
-					</Button>
-					<Button className="tab-btn" onClick={(event) => {changeListingTab(event, "to_read");}}>
-						To Read ({listingTabCount.to_read ? listingTabCount.to_read : 0})
-					</Button>
-					<Button className="tab-btn" onClick={(event) => {changeListingTab(event, "reading");}}>
-						Reading ({listingTabCount.reading ? listingTabCount.reading : 0})
-					</Button>
-					<Button className="tab-btn" onClick={(event) => {changeListingTab(event, "completed");}}>
-						Completed ({listingTabCount.completed ? listingTabCount.completed : 0})
-					</Button>
-				</div>
-			</div>
-			<div className="mt-3">
-				<CustomTable listingData={listingData} thArray={thArray} listingCss={listingCss} pagingData={pagination} pagingFunction={getBookList}/>
-			</div>
-		</>
-	)
-}
+      <ExpenseDetailsModal
+        expenseID={selectedExpenseID}
+        isOpen={isDetailsOpen}
+        onClose={closeDetailsModal}
+      />
+    </>
+  );
+};
 
 export default Dashboard;

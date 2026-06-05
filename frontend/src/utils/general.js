@@ -10,6 +10,19 @@ import { faEyeSlash, faEye } from '@fortawesome/free-solid-svg-icons';
 // Import services
 import { showSystemPopup } from '../services/CustomSystemPopupService.js';
 
+const getAuthHeaders = () => {
+	const headers = {
+		"Content-Type": "application/json",
+	};
+
+	const sessionToken = localStorage.getItem('sessionToken');
+	if (sessionToken) {
+		headers["Authorization"] = `Bearer ${sessionToken}`;
+	}
+
+	return headers;
+};
+
 export const apiCaller = async (method, param, fCallback, setErrMsg, setIsLoading=null) => {
 
 	if (method === "POST") {
@@ -21,13 +34,9 @@ export const apiCaller = async (method, param, fCallback, setErrMsg, setIsLoadin
 			params['params'] = {};
 		}
 
-		params['params']['userID'] = sessionStorage.getItem('userID') ? sessionStorage.getItem('userID') : "";
-
 		try {
 			let res = await axios.post(customUrl, params, {
-				headers: {
-		      "Content-Type": "application/json",
-		    },
+				headers: getAuthHeaders(),
 			});
 
 			callApiSuccess(res, fCallback, setErrMsg, param);
@@ -61,7 +70,9 @@ export const apiCaller = async (method, param, fCallback, setErrMsg, setIsLoadin
 		}
 
 		try {
-			let res = await axios.get(apiURL);
+			let res = await axios.get(apiURL, {
+				headers: getAuthHeaders(),
+			});
 
 			if (fCallback) {
 				fCallback(res, "Success Get Data");
@@ -88,6 +99,10 @@ function callApiSuccess(res, fCallback, setErrMsg, param) {
 	let result = res["data"];
 
 	if (result && result.status === "ok") {
+		if (result['data'] && result['data']['sessionToken']) {
+			localStorage.setItem('sessionToken', result['data']['sessionToken']);
+		}
+
 		if (result['data'] && result['data']['isLoginData'] && result['data']['isLoginData'] === 1) {
 			if (result['data']['sessionID']) {
 				sessionStorage.setItem('userSession', result['data']['sessionID']);
@@ -199,6 +214,11 @@ export const formatNumberWithThousandsSeparator = (inputVal) => {
 	if (Number.isNaN(num)) return String(inputVal);
 
 	return new Intl.NumberFormat("en-US").format(num);
+};
+
+export const formatCurrencyRM = (inputVal) => {
+	const formatted = formatNumberWithThousandsSeparator(inputVal);
+	return formatted ? `RM ${formatted}` : "";
 };
 
 export const PasswordToggle = ({ passwordRef, initial = false }) => {
