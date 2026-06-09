@@ -104,14 +104,6 @@ function callApiSuccess(res, fCallback, setErrMsg, param) {
 		}
 
 		if (result['data'] && result['data']['isLoginData'] && result['data']['isLoginData'] === 1) {
-			if (result['data']['sessionID']) {
-				sessionStorage.setItem('userSession', result['data']['sessionID']);
-			}
-
-			if (result['data']['clientID']) {
-				sessionStorage.setItem('userID', result['data']['clientID']);
-			}
-
 			if (result['data']['userInfo']) {
 				sessionStorage.setItem('fullName', result['data']['userInfo']['name']);
 				sessionStorage.setItem('email', result['data']['userInfo']['email']);
@@ -141,9 +133,23 @@ function errorHandling(code, msg) {
 		case 2:
 			showSystemPopup(msg, 'error');
 			break;
+		case 3:
+			showSystemPopup(msg, 'error');
+			logoutUser();
+			break;
 		default:
 			console.log('Default Error');
 	}
+}
+
+export const logoutUser = () => {
+	localStorage.removeItem("sessionToken");
+	localStorage.removeItem("fullName");
+	localStorage.removeItem("email");
+
+	setTimeout(() => {
+		window.location.href = '/';
+	}, 1500);
 }
 
 export const restrictNumberOnly = (inputEvent, sort = "normal", inputDecimal) => {

@@ -3,6 +3,8 @@ import { Container, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faBars, faXmark, faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { logoutUser } from "../utils/general";
+import { showSystemPopup } from '../services/CustomSystemPopupService.js';
 
 const HeaderDisplay: React.FC = () => {
   const navigate = useNavigate();
@@ -15,8 +17,8 @@ const HeaderDisplay: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("sessionToken");
-    navigate("/");
+    showSystemPopup("Logging out...", 'success');
+    logoutUser();
   };
 
   useEffect(() => {
