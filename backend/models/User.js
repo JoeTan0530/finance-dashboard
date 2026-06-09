@@ -142,7 +142,6 @@ userSchema.statics.loginUser = async function (params) {
 		const sessionData = {
 			isLoginData: 1,
 			sessionToken: generatedToken,
-			clientID: userRes['_id'],
 			userInfo: {
 				name: userRes['full_name'],
 				email: userRes['email']
@@ -163,7 +162,7 @@ userSchema.statics.loginUser = async function (params) {
 
 userSchema.statics.verifyLoginToken = async function(loginToken = "", userID = "") {
 	if (!loginToken || loginToken == "") {
-		return generateReturnObj("Error", 2, "", "Invalid login token.");
+		return generateReturnObj("Error", 3, "", "Invalid login token.");
 	}
 
 	const verifiedUserID = verifyIdFormat(userID);
@@ -176,7 +175,7 @@ userSchema.statics.verifyLoginToken = async function(loginToken = "", userID = "
 	if (getUserRes && getUserRes['loginToken'] == loginToken) {
 		return generateReturnObj("Success", 0, "", "Successfully verified login token.");
 	} else {
-		return generateReturnObj("Error", 2, "","Unable to verify token.");
+		return generateReturnObj("Error", 3, "","Unable to verify token.");
 	}
 }
 

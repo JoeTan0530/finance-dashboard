@@ -61,7 +61,7 @@ const convertFirstCharToUpper = (itemString = "") => {
 
 const decodeToken = (token = "") => {
 	if (!token || token == "") {
-		return generateReturnObj("Error", 2, "", "Invalid token, please relogin to get new valid login token.");
+		return generateReturnObj("Error", 3, "", "Invalid token, please relogin to get new valid login token.");
 	}
 
 	const JWT_SECRET = process.env.JWT_SECRET;
@@ -71,7 +71,7 @@ const decodeToken = (token = "") => {
 
 		return decodedToken;
 	} catch (error) {
-		return generateReturnObj("Error", 2, "", error.message);
+		return generateReturnObj("Error", 3, "", `Token expired please login again.`);
 	}
 }
 
