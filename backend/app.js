@@ -18,6 +18,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/category', require('./routes/category'));
+app.use('/api/budget', require('./routes/budget'));
 
 
 // Add error handling middleware

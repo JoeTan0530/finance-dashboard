@@ -3,7 +3,6 @@ const {
 	generateReturnObj,
 	verifyIdFormat
 } = require('./utilities/general');
-const jwt = require('jsonwebtoken');
 
 const Category = require('./Category');
 
@@ -196,6 +195,82 @@ expenseSchema.statics.getPagination = async function(params) {
 	}
 
 	return paginationObj;
+}
+
+expenseSchema.statics.getDateRangeExpense = async function(params) {
+	const {
+		userID,
+		type
+	} = params;
+
+	const verifyUserID = verifyIdFormat(userID);
+
+	if (!userID || userID == "" || (verifyUserID['status'] && verifyUserID['status'] == "error")) {
+		return generateReturnObj("Error", 2, "", "Invalid user ID.");
+	}
+
+	if (!type || type == "") {
+		return generateReturnObj("Success", 0, [], "No result found");
+	}
+
+	const today = new Date();
+
+	let startDate;
+	let endDate;
+
+	switch (type) {
+		case "weekly":
+			// Get Monday of the week.
+			const day = today.getDay();
+			const dayDiff1 = (day === 0 ? -6 : 1) - day;
+			const monday = new Date(today);
+			monday.setDate(today.getDate() + dayDiff1);
+			startDate = monday;
+
+			// Get Sunday of the week.
+			const dayDiff2 = (day === 0 ? 0 : 7) - day;
+			const sunday = new Date(today);
+			sunday.setDate(today.getDate() + dayDiff2);
+			endDate = sunday;
+			break;
+		case "monthly":
+			startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+			endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+			break;
+		default:
+			return generateReturnObj("Success", 0, [], "No result found");
+	}
+
+	const dateRangeDataRes = await this.aggregate([
+		{
+			$match: {
+				user_id: new mongoose.Types.ObjectId(verifyUserID),
+				date: {
+					$gte: startDate,
+					$lte: endDate
+				}
+			}
+		},
+		{
+			$project: {
+				_id: 0,
+				amount: 1,
+				category: 1,
+				date: 1
+			}
+		},
+		{
+			$sort: {
+				createdAt: -1
+			}
+		},
+	]);
+
+	if (dateRangeDataRes && dateRangeDataRes.length > 0) {
+		return generateReturnObj("Success", 0, dateRangeDataRes);
+	} else {
+		return generateReturnObj("Success", 0, [], "No result found");	
+	}
 }
 
 expenseSchema.statics.addExpense = async function(params) {

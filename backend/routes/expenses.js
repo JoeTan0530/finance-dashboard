@@ -36,6 +36,9 @@ router.post('/', async(req, res) => {
 			case "getExpenseItem":
 				response = await Expense.getExpenseItem(params);
 				break;
+			case "getDateRangeExpense":
+				response = await Expense.getDateRangeExpense(params);
+				break;
 			case "getExpenseList":
 				response = await Expense.getExpenseList(params);
 				break;

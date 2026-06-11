@@ -75,11 +75,16 @@ const decodeToken = (token = "") => {
 	}
 }
 
+const convertMillisecToSec = (timestamp) => {
+	return Math.floor(timestamp / 1000);
+}
+
 // Export all functions
 module.exports = {
     generateReturnObj,
     verifyIdFormat,
     mapCountObj,
     convertFirstCharToUpper,
-    decodeToken
+    decodeToken,
+    convertMillisecToSec
 };
