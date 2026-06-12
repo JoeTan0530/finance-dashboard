@@ -23,6 +23,34 @@ export const getExpenseList = (pageNum, callback) => {
   apiCaller("POST", params, callback);
 };
 
+export const getWeeklyExpense = (callback) => {
+  const params = {
+    url: getExpenseApiUrl(),
+    urlParams: {
+      command: "getDateRangeExpense",
+      params: {
+        type: "weekly"
+      },
+    },
+  };
+
+  apiCaller("POST", params, callback);
+}
+
+export const getMonthlyExpense = (callback) => {
+  const params = {
+    url: getExpenseApiUrl(),
+    urlParams: {
+      command: "getDateRangeExpense",
+      params: {
+        type: "monthly"
+      },
+    },
+  };
+
+  apiCaller("POST", params, callback);
+}
+
 export const getExpenseItem = (expenseID, callback) => {
   const params = {
     url: getExpenseApiUrl(),

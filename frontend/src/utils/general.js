@@ -152,6 +152,10 @@ export const logoutUser = () => {
 	}, 1500);
 }
 
+export const generateRandomColorCode = () => {
+	return `${"#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+}
+
 export const restrictNumberOnly = (inputEvent, sort = "normal", inputDecimal) => {
 	let inputVal = inputEvent.target.value;
 	const maxDecimal = parseInt(inputDecimal ? inputDecimal : process.env.REACT_APP_DEFAULT_DP, 10);

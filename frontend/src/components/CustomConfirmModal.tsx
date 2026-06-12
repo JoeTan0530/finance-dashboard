@@ -10,6 +10,7 @@ export interface CustomConfirmModalProps {
   confirmVariant?: string;
   onConfirm: () => Promise<void> | void;
   onCancel: () => void;
+  manualClose: boolean;
 }
 
 const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
@@ -20,7 +21,7 @@ const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   cancelText = "Cancel",
   confirmVariant = "danger",
   onConfirm,
-  onCancel,
+  onCancel
 }) => {
   const [isWorking, setIsWorking] = useState(false);
 
