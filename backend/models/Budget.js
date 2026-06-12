@@ -152,7 +152,19 @@ budgetSchema.statics.getBudgetList = async function(params) {
 			});
 		});
 
-		return generateReturnObj("Success", 0, tempNewBudgetList);
+		let budgetList = [];
+		// Rearrange array to specific order.
+		budgetTypeList.forEach((item, index) => {
+			const butdgetItem = tempNewBudgetList.find((budgetObj) => {
+				return budgetObj.type == item.label;
+			});
+
+			if (butdgetItem) {
+				budgetList.push(butdgetItem);
+			}
+		});
+
+		return generateReturnObj("Success", 0, budgetList);
 
 	} else {
 		return generateReturnObj("Success", 0, "", "No results found.");
@@ -259,14 +271,13 @@ budgetSchema.statics.verifyUniqueBudgetType = async function (checkingUserID, se
 	const existingBudgetRes = await this.aggregate([
 		{
 			$match: {
-				user_id: checkingUserID
+				user_id: new mongoose.Types.ObjectId(checkingUserID)
 			}
 		}, 
 		{
 			$project: {
 				_id: 0,
 				budgetID: "$_id",
-				// amount: 1,
 				type: 1,
 			}
 		}
