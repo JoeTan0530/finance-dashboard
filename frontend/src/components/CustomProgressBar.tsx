@@ -49,7 +49,7 @@ const CustomProgressBar: React.FC<CustomProgressBarProps> = (props) => {
 		}
 	}
 
-	if (limit && limit != "" && limit != 0) {
+	if (limit && limit !== "" && limit !== 0) {
 		return (
 			<div className="progress-bar-container">
 				<div className="progress-bar-limit-container">

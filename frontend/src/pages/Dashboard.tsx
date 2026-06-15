@@ -14,7 +14,7 @@ import { showConfirmModal } from "../services/CustomConfirmModalService.js";
 import { formatCurrencyRM, formatDateDDMMYYYY, restrictNumberOnly } from "../utils/general.js";
 import { getCategoryList } from "../services/CategoryService.js";
 import { getExpenseList, removeExpense, getWeeklyExpense, getMonthlyExpense } from "../services/ExpenseService.js";
-import { getBudgetOptions, getBudgetList, addBudgetItem, editBudgetItem, removeBudget } from "../services/BudgetService.js";
+import { getBudgetOptions, getBudgetList, addBudgetItem, removeBudget } from "../services/BudgetService.js";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -46,16 +46,19 @@ const Dashboard: React.FC = () => {
       setPagination(data?.pagination || {});
     });
     getPieChartData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getPieChartData = useCallback(() => {
     getWeeklyExpense((data) => {
       setWeeklyChartData(mapListForPieChart(data));
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
 
     getMonthlyExpense((data) => {
       setMonthlyChartData(mapListForPieChart(data));
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getBudgetOptionList = useCallback(() => {
@@ -86,11 +89,15 @@ const Dashboard: React.FC = () => {
     });
 
     getBudgetOptionList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     getBudgetDataList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     getPieChartData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryMap]);
 
   useEffect(() => {
@@ -176,7 +183,7 @@ const Dashboard: React.FC = () => {
 
   const changeBudgetSection = useCallback(async (sectionName) => {
     setBudgetSection(sectionName);
-  });
+  }, []);
 
   const triggerAddBudget = useCallback(async () => {
     addBudgetItem(addBudgetFormInput, (data) => {
@@ -184,7 +191,8 @@ const Dashboard: React.FC = () => {
       getBudgetDataList();
       changeBudgetSection("display");
     });
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const triggerDeleteBudget = useCallback(async (budgetID) => {
     const budgetItem = budgetDataList.current.find((item) => item.budgetID === budgetID);
@@ -219,7 +227,8 @@ const Dashboard: React.FC = () => {
       showSystemPopup("Successfully removed budget setting.");
       getBudgetDataList();
     });
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -316,7 +325,7 @@ const Dashboard: React.FC = () => {
                   </Col>
                   <Col xs={12} xl={6} className="d-flex justify-content-center align-items-cetner">
                     {
-                      budgetSection == "display" && (
+                      budgetSection === "display" && (
                         <>
                           {
                             budgetList.length === 0 && (
