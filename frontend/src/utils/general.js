@@ -35,9 +35,16 @@ export const apiCaller = async (method, param, fCallback, setErrMsg, setIsLoadin
 		}
 
 		try {
+
+			const timeoutID = setTimeout(() => {
+				showSystemPopup(`Initializing webservices, sorry for the wait...`, 'warning', 10000);
+			}, 1500);
+			
 			let res = await axios.post(customUrl, params, {
 				headers: getAuthHeaders(),
 			});
+
+			clearTimeout(timeoutID);
 
 			callApiSuccess(res, fCallback, setErrMsg, param);
 
