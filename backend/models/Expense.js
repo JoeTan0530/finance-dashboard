@@ -111,11 +111,22 @@ expenseSchema.statics.getExpenseList = async function(params) {
 			$match: matchCondition
 		},
 		{
+			$lookup: {
+				from: "categories",
+				localField: "category",
+				foreignField: "category_value",
+				as: "category_details"
+			}
+		},
+		{ 
+		    $unwind: "$category_details" 
+	 	},
+		{
 			$project: {
 				_id: 0,
 				expenseID: "$_id",
 				amount: 1,
-				category: 1,
+				category: "$category_details.category_name",
 				description: 1,
 				date: 1,
 				createdAt: {
@@ -252,10 +263,21 @@ expenseSchema.statics.getDateRangeExpense = async function(params) {
 			}
 		},
 		{
+			$lookup: {
+				from: "categories",
+				localField: "category",
+				foreignField: "category_value",
+				as: "category_details"
+			}
+		},
+		{ 
+		    $unwind: "$category_details" 
+	 	},
+		{
 			$project: {
 				_id: 0,
 				amount: 1,
-				category: 1,
+				category: "$category_details.category_name",
 				date: 1
 			}
 		},
